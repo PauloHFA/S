@@ -141,29 +141,29 @@ public class FinalizarPedido {
 
 ```mermaid
 graph TD
-    subgraph Application["🟠 Application Layer"]
-        FP[FinalizarPedido<br/>Orquestra caso de uso]
+    subgraph Application["Application Layer"]
+        FP[FinalizarPedido\nOrquestra caso de uso]
     end
     
-    subgraph Domain["🔵 Domain Layer<br/>(Regras de Negócio)"]
-        P[Pedido<br/>calcularTotal()]
+    subgraph Domain["Domain Layer (Regras de Negocio)"]
+        P[Pedido\ncalcularTotal()]
         I[Item]
         C[Cliente]
     end
     
-    subgraph Infra["🟣 Infrastructure Layer"]
-        PR[PedidoRepository<br/>salvar()]
+    subgraph Infra["Infrastructure Layer"]
+        PR[PedidoRepository\nsalvar()]
     end
     
-    subgraph Notification["🟢 Notification Layer"]
-        N[Notificador<br/><<interface>>]
-        NE[NotificadorDePedido<br/>E-mail]
-        NS[NotificadorSMS<br/>SMS]
-        NW[NotificadorWhatsApp<br/>WhatsApp]
+    subgraph Notification["Notification Layer"]
+        N[Notificador (interface)]
+        NE[NotificadorDePedido\nE-mail]
+        NS[NotificadorSMS\nSMS]
+        NW[NotificadorWhatsApp\nWhatsApp]
     end
     
-    subgraph Report["🟡 Report Layer"]
-        GN[GeradorDeNota<br/>gerarHtml()]
+    subgraph Report["Report Layer"]
+        GN[GeradorDeNota\ngerarHtml()]
     end
 
     FP --> PR
