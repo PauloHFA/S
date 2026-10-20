@@ -2,14 +2,15 @@ package com.example.solid.after.application;
 
 import com.example.solid.after.domain.Pedido;
 import com.example.solid.after.infra.PedidoRepository;
-import com.example.solid.after.notification.NotificadorDePedido;
+import com.example.solid.after.notification.Notificador;
 
 public class FinalizarPedido {
     private final PedidoRepository repository;
-    private final NotificadorDePedido notificador;
+    private final Notificador notificador;
 
     // Injeção de dependência pelo construtor (prepara para o D do SOLID)
-    public FinalizarPedido(PedidoRepository repository, NotificadorDePedido notificador) {
+    // Depende de abstração (Notificador), não de implementação concreta
+    public FinalizarPedido(PedidoRepository repository, Notificador notificador) {
         this.repository = repository;
         this.notificador = notificador;
     }

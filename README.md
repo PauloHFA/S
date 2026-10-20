@@ -135,6 +135,63 @@ public class FinalizarPedido {
 - `FinalizarPedido` não viola SRP: sua única responsabilidade é coordenar o fluxo
 - Dependências injetadas pelo construtor (prepara para o **D** do SOLID)
 - Regra de negócio testável **sem mocks** de infraestrutura
+- **OCP/DIP ready**: `Notificador` é uma interface, permite `NotificadorSMS`, `NotificadorWhatsApp` sem modificar `FinalizarPedido`
+
+## 📊 Diagrama de Arquitetura (Versão `after`)
+
+```mermaid
+graph TD
+    subgraph Application["🟠 Application Layer"]
+        FP[FinalizarPedido<br/>Orquestra caso de uso]
+    end
+    
+    subgraph Domain["🔵 Domain Layer<br/>(Regras de Negócio)"]
+        P[Pedido<br/>calcularTotal()]
+        I[Item]
+        C[Cliente]
+    end
+    
+    subgraph Infra["🟣 Infrastructure Layer"]
+        PR[PedidoRepository<br/>salvar()]
+    end
+    
+    subgraph Notification["🟢 Notification Layer"]
+        N[Notificador<br/><<interface>>]
+        NE[NotificadorDePedido<br/>E-mail]
+        NS[NotificadorSMS<br/>SMS]
+        NW[NotificadorWhatsApp<br/>WhatsApp]
+    end
+    
+    subgraph Report["🟡 Report Layer"]
+        GN[GeradorDeNota<br/>gerarHtml()]
+    end
+
+    FP --> PR
+    FP -.->|depende de abstração| N
+    N <|.. NE
+    N <|.. NS
+    N <|.. NW
+    PR --> P
+    NE --> P
+    NS --> P
+    NW --> P
+    GN --> P
+    
+    style Domain fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style Application fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style Infra fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style Notification fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style Report fill:#fffde7,stroke:#fbc02d,stroke-width:2px
+```
+
+**Legenda das cores:**
+- 🔵 **Azul (Domain)**: Núcleo do negócio - regras que mudam por área comercial
+- 🟠 **Laranja (Application)**: Orquestração - muda quando fluxo do caso de uso muda
+- 🟣 **Roxo (Infra)**: Persistência - muda por DBA/infraestrutura
+- 🟢 **Verde (Notification)**: Canais de comunicação - muda por Marketing
+- 🟡 **Amarelo (Report)**: Relatórios fiscais - muda por Financeiro/Fiscal
+
+> **Nota**: As setas tracejadas (`-.->`) indicam dependência de **abstração** (interface `Notificador`), não de implementação concreta. Isso é o **DIP (Dependency Inversion Principle)** em ação - preparando o terreno para o **D** do SOLID.
 
 ## 🧪 Testes que Provam o Ganho
 
@@ -148,25 +205,137 @@ public class FinalizarPedido {
 
 ### Pré-requisitos
 - Java 17+
-- Maven ou Gradle
+- Maven 3.8+
 
-### Compilar e testar versão `before`
+### Opção 1: Maven (Recomendado) - Executa tudo incluindo qualidade
+
 ```bash
+# Compilar e testar tudo (before, after, acceptance-test)
+mvn clean test
+
+# Análise estática completa
+mvn verify spotbugs:check checkstyle:check pmd:check
+
+# Relatório de cobertura JaCoCo
+mvn verify jacoco:report
+# Abre target/site/jacoco/index.html
+```
+
+### Opção 2: Maven por módulo
+
+```bash
+# Versão before (viola SRP)
+cd before && mvn test
+
+# Versão after (respeita SRP)  
+cd after && mvn test
+
+# Testes de aceitação compartilhados (compara before vs after)
+cd acceptance-test && mvn test
+```
+
+### Opção 3: Compilação manual (sem Maven)
+
+```bash
+# Versão before
 cd before
-# Com Maven
-mvn test
-
-# Ou compilar manualmente
 javac -d out src/main/java/com/example/solid/before/*.java
-javac -cp out:lib/junit-jupiter-api-5.9.0.jar -d test-out src/test/java/com/example/solid/before/PedidoTest.java
-java -cp test-out:out:lib/* org.junit.platform.console.ConsoleLauncher --scan-classpath
+# Requer JUnit no classpath para testes
+
+# Versão after
+cd after
+javac -d out src/main/java/com/example/solid/after/**/*.java
 ```
 
-### Compilar e testar versão `after`
+### SonarQube Local (Docker)
+
 ```bash
-cd after
-mvn test
+# Subir SonarQube
+docker run -d --name sonarqube -p 9000:9000 sonarqube:lts-community
+
+# Aguardar subir (~2 min), acessar http://localhost:9000 (admin/admin)
+# Criar projeto "solid-01-srp", gerar token
+
+# Analisar
+mvn sonar:sonar -Dsonar.projectKey=solid-01-srp -Dsonar.host.url=http://localhost:9000 -Dsonar.token=SEU_TOKEN
 ```
+
+## 📊 Métricas de Qualidade Esperadas
+
+| Métrica | `before` (Viola SRP) | `after` (Respeita SRP) |
+|---------|---------------------|------------------------|
+| **Classes** | 3 | 8 |
+| **Métodos por classe** | ~5 (Pedido) | 1-3 |
+| **Complexidade Ciclomática (Pedido)** | Alta (~8) | Baixa (~2) |
+| **Acoplamento (CBO - Pedido)** | Alto (4+) | Baixo (0-1) |
+| **Coesão (LCOM4 - Pedido)** | Baixa | Alta |
+| **Testabilidade (mocks necessários)** | 3+ mocks | 0 mocks (domínio) |
+| **Cobertura de testes** | Parcial | 100% domínio |
+
+> Execute `mvn verify` e veja os relatórios em `target/site/` de cada módulo.
+
+## 🎓 Exemplos Didáticos Adicionais (na pasta `after/`)
+
+### 1. Domínio Anêmico vs Rico (`domain/PedidoAnemico.java` vs `domain/PedidoRico.java`)
+
+```java
+// ❌ ANÊMICO - Apenas getters/setters, regras vazam para Service
+public class PedidoAnemico {
+    public void setTotal(double total) { this.total = total; } // Perigoso!
+    public void setStatus(String status) { this.status = status; } // Sem validação!
+}
+
+// ✅ RICO/EQUILIBRADO - Encapsula estado + comportamento coeso
+public class PedidoRico {
+    public void confirmar() { ... }        // Transição controlada
+    public void adicionarItem(Item item) { ... } // Protege invariantes
+    public double calcularTotal() { ... }  // Regra pura, testável
+}
+```
+
+| Aspecto | Anêmico (❌) | Rico/Equilibrado (✅) |
+|---------|-------------|----------------------|
+| Estado inválido | Possível | Impossível |
+| Regras de negócio | Em Service externo | Na entidade (coeso) |
+| Transições de estado | Livres (`setStatus`) | Controladas (`confirmar()`) |
+| Testabilidade | Precisa de Service | Teste direto na entidade |
+
+> **Lição**: "Responsabilidade única" ≠ "Um método só". `PedidoRico` tem vários métodos, mas TODOS servem à mesma responsabilidade: *"Gerenciar ciclo de vida e regras do pedido"*.
+
+### 2. Logger/Config no Domínio (Anti-pattern Sutil) - `domain/PedidoComInfra.java`
+
+```java
+// ❌ VIOLAÇÃO: Domínio conhece infraestrutura
+public class PedidoComInfra {
+    private final Logger logger;      // ❌ Domínio não deve logar
+    private final AppConfig config;   // ❌ Domínio não deve ler config
+    
+    public double calcularTotal() {
+        logger.info("Calculando...");  // Responsabilidade da app/infra
+        double desconto = config.getDouble("desconto.vip"); // Responsabilidade da app
+    }
+}
+
+// ✅ CORRETO: Domínio puro
+public class PedidoCorreto {
+    public double calcularTotal() { ... } // Zero logging, zero config
+}
+```
+
+**Onde cada coisa pertence:**
+- **Domain**: Zero logging, zero config — só regras puras
+- **Application** (`FinalizarPedido`): Log de auditoria, feature flags, timeouts
+- **Infra** (`PedidoRepository`): Log de SQL, performance, connection pool
+
+## 📋 ADRs (Architecture Decision Records)
+
+Decisões arquiteturais documentadas em [`docs/adr/`](docs/adr/):
+
+| ADR | Título | Resumo |
+|-----|--------|--------|
+| [001](docs/adr/001-separar-responsabilidades-pedido.md) | Separar Responsabilidades do Pedido | Extração de 4 responsabilidades em 5 classes |
+| [002](docs/adr/002-injecao-dependencia-construtor.md) | Injeção de Dependência pelo Construtor | Imutabilidade, testabilidade, prepara DIP |
+| [003](docs/adr/003-nao-criar-interfaces-prematuras.md) | Não Criar Interfaces Prematuras (YAGNI) | Interface só quando 2ª implementação surgir |
 
 ## ✅ Checklist de Revisão do SRP
 

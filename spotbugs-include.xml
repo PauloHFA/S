@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Incluir apenas bugs de alta/mediana severidade relevantes para SRP -->
+    <Match>
+        <BugCategory>CORRECTNESS</BugCategory>
+    </Match>
+    <Match>
+        <BugCategory>BAD_PRACTICE</BugCategory>
+    </Match>
+    <Match>
+        <BugCategory>MT_CORRECTNESS</BugCategory>
+    </Match>
+    <Match>
+        <BugCategory>PERFORMANCE</BugCategory>
+    </Match>
+    <Match>
+        <BugCategory>SECURITY</BugCategory>
+    </Match>
+    
+    <!-- Excluir warnings de estilo em código educacional -->
+    <Match>
+        <BugCode>DM_DEFAULT_ENCODING</BugCode>
+    </Match>
+    <Match>
+        <BugCode>DM_CONVERT_CASE</BugCode>
+    </Match>
+</FindBugsFilter>
